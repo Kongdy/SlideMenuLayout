@@ -3,12 +3,16 @@ package com.kongdy.slidemenulib;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 
 /**
  * @author kongdy
@@ -22,19 +26,25 @@ public class SlideMenuLayout extends ViewGroup {
     /**
      * is playing animation
      */
-    private final static int SLIDE_MODE_ANIM = 0x01;
+    private final static int VIEW_MODE_ANIM = 0x01;
     /**
      * is on close
      */
     private final static int SLIDE_MODE_CLOSE = 0x02;
     /**
-     * is on touch drag
+     * is on touch down
      */
-    private final static int SLIDE_MODE_DRAG = 0x03;
+    private final static int VIEW_MODE_TOUCH = 0x03;
     /**
      * is on open
      */
     private final static int SLIDE_MODE_OPEN = 0x04;
+    /**
+     * is on drag
+     */
+    private final static int VIEW_MODE_DRAG = 0x05;
+
+    private final static int VIEW_MODE_IDLE = 0x06;
 
 
     private View slideMenuView;
@@ -44,7 +54,10 @@ public class SlideMenuLayout extends ViewGroup {
 
     private float slideOffset = 0f;
 
+    private int viewMode = SLIDE_MODE_CLOSE;
     private int slideMode = SLIDE_MODE_CLOSE;
+    private float preTouchX = 0;
+    private float preTouchY = 0;
 
     public SlideMenuLayout(Context context) {
         this(context, null);
@@ -95,23 +108,92 @@ public class SlideMenuLayout extends ViewGroup {
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         // handle weather intercept touch event
-        switch (ev.getActionMasked()){
-            case MotionEvent.ACTION_DOWN:
-                break;
-            case MotionEvent.ACTION_MOVE:
-                break;
+        switch (ev.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN: {
+                Rect rect = new Rect();
+                contentView.getDrawingRect(rect);
+
+                final int touchDownX = (int) ev.getX();
+                final int touchDownY = (int) ev.getY();
+
+                if (rect.contains(touchDownX, touchDownY)) {
+                    viewMode = VIEW_MODE_TOUCH;
+                    return true;
+                }
+            }
+            break;
+            case MotionEvent.ACTION_MOVE: {
+                if (viewMode == VIEW_MODE_DRAG)
+                    return true;
+                if (viewMode == VIEW_MODE_TOUCH) {
+                    Rect rect = new Rect();
+                    contentView.getDrawingRect(rect);
+
+                    final int touchDownX = (int) ev.getX();
+                    final int touchDownY = (int) ev.getY();
+
+                    if (rect.contains(touchDownX, touchDownY)) {
+                        viewMode = VIEW_MODE_DRAG;
+                        final ViewParent viewParent = getParent();
+                        if (viewParent != null)
+                            viewParent.requestDisallowInterceptTouchEvent(false);
+                        return true;
+                    } else {
+                        resetTouchMode();
+                    }
+                }
+            }
+            break;
         }
         return super.onInterceptTouchEvent(ev);
     }
 
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        return super.dispatchTouchEvent(ev);
+    private void resetTouchMode() {
+        if (viewMode == VIEW_MODE_TOUCH || viewMode == VIEW_MODE_DRAG) {
+            viewMode = VIEW_MODE_IDLE;
+            final ViewParent viewParent = getParent();
+            if (viewParent != null)
+                viewParent.requestDisallowInterceptTouchEvent(false);
+        }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        return super.onTouchEvent(event);
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                preTouchX = event.getX();
+                preTouchY = event.getY();
+                break;
+            case MotionEvent.ACTION_MOVE: {
+                final float currentTouchX = event.getX();
+                final float offsetX = currentTouchX - preTouchX;
+                int contentLeft = contentView.getLeft();
+                int preCalcLeft = (int) (contentLeft + offsetX);
+                if (preCalcLeft >= 0 && preCalcLeft <= getWidth() * MAX_DRAG_FACTOR) {
+                    slideOffset = preCalcLeft / (getWidth() * MAX_DRAG_FACTOR);
+                    reDraw();
+                }
+                preTouchX = currentTouchX;
+            }
+            break;
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_UP: {
+                int contentLeft = contentView.getLeft();
+                final int currentWidth = getWidth();
+                final int halfWidth = currentWidth / 2;
+                int animFactor = (contentLeft + halfWidth) / currentWidth;
+                if (animFactor > 0) {
+                    animToOpen();
+                } else {
+                    animToClose();
+                }
+                resetTouchMode();
+            }
+
+            break;
+        }
+        return true;
     }
 
     @Override
@@ -126,7 +208,7 @@ public class SlideMenuLayout extends ViewGroup {
             ), MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
         }
         if (slideMenuView != null) {
-            slideMenuView.measure(MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth*MAX_DRAG_FACTOR), MeasureSpec.EXACTLY),
+            slideMenuView.measure(MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth * MAX_DRAG_FACTOR), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
         }
     }
@@ -136,17 +218,17 @@ public class SlideMenuLayout extends ViewGroup {
     }
 
     public void animToClose() {
-        if (slideMode == SLIDE_MODE_ANIM)
+        if (viewMode == VIEW_MODE_ANIM)
             return;
-        slideMode = SLIDE_MODE_ANIM;
+        viewMode = VIEW_MODE_ANIM;
         Animator valueAnimator = createValueAnim(slideOffset, 0f, SLIDE_MODE_CLOSE);
         valueAnimator.start();
     }
 
     public void animToOpen() {
-        if (slideMode == SLIDE_MODE_ANIM)
+        if (viewMode == VIEW_MODE_ANIM)
             return;
-        slideMode = SLIDE_MODE_ANIM;
+        viewMode = VIEW_MODE_ANIM;
         Animator valueAnimator = createValueAnim(slideOffset, 1f, SLIDE_MODE_OPEN);
         valueAnimator.start();
     }
@@ -158,43 +240,46 @@ public class SlideMenuLayout extends ViewGroup {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
                 slideOffset = (float) animation.getAnimatedValue();
-                requestLayout();
-                postInvalidate();
+                reDraw();
             }
         });
         valueAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
+                viewMode = VIEW_MODE_IDLE;
                 slideMode = result_mode;
             }
 
             @Override
             public void onAnimationCancel(Animator animation) {
+                viewMode = VIEW_MODE_IDLE;
                 slideMode = result_mode;
             }
         });
         return valueAnimator;
     }
 
+    private void reDraw() {
+        requestLayout();
+        postInvalidateOnAnimation();
+    }
+
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         // to layout menu view and content view
         if (contentView != null) {
-            final int contentLeft = (int) (l+slideOffset * MAX_DRAG_FACTOR * (r - l));
+            final int contentLeft = (int) (l + slideOffset * MAX_DRAG_FACTOR * (r - l));
             final int contentRight = contentLeft + contentView.getMeasuredWidth();
             contentView.layout(contentLeft, t, contentRight, b);
         }
         if (slideMenuView != null) {
             final int slideMenuWidth = slideMenuView.getMeasuredWidth();
             final int slideMenuHeight = slideMenuView.getMeasuredHeight();
-            slideMenuView.layout(l, t, l+slideMenuWidth, t+slideMenuHeight);
+            // 视觉滚动差效果
+            final int menuLeft = (int) (l - (1-slideOffset) * MAX_DRAG_FACTOR * (r - l)*0.5f);
+            final int menuRight = menuLeft + slideMenuWidth;
+            slideMenuView.layout(menuLeft, t, menuRight, t + slideMenuHeight);
         }
-    }
-
-
-    @Override
-    public void addView(View child, int index, LayoutParams params) {
-        super.addView(child, index, params);
     }
 
 
