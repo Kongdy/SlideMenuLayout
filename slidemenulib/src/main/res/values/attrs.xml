@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SlideMenuLayout">
+        <attr name="sml_content_id" format="reference"/>
+        <attr name="sml_menu_id" format="reference"/>
+    </declare-styleable>
+</resources>
