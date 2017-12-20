@@ -3,5 +3,7 @@
     <declare-styleable name="SlideMenuLayout">
         <attr name="sml_content_id" format="reference"/>
         <attr name="sml_menu_id" format="reference"/>
+        <!-- 视觉滚动差参数因子 -->
+        <attr name="sml_parallax_offset" format="float"/>
     </declare-styleable>
 </resources>

@@ -10,7 +10,6 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 
@@ -58,6 +57,7 @@ public class SlideMenuLayout extends ViewGroup {
     private int slideMode = SLIDE_MODE_CLOSE;
     private float preTouchX = 0;
     private float preTouchY = 0;
+    private float slideMenuParallaxOffset = 0.5f;
 
     public SlideMenuLayout(Context context) {
         this(context, null);
@@ -99,6 +99,8 @@ public class SlideMenuLayout extends ViewGroup {
                 contentViewId = ta.getResourceId(index, View.NO_ID);
             } else if (index == R.styleable.SlideMenuLayout_sml_menu_id) {
                 slideMenuId = ta.getResourceId(index, View.NO_ID);
+            } else if(index == R.styleable.SlideMenuLayout_sml_parallax_offset){
+                slideMenuParallaxOffset = ta.getFloat(index,0.5f);
             }
         }
 
@@ -276,7 +278,7 @@ public class SlideMenuLayout extends ViewGroup {
             final int slideMenuWidth = slideMenuView.getMeasuredWidth();
             final int slideMenuHeight = slideMenuView.getMeasuredHeight();
             // 视觉滚动差效果
-            final int menuLeft = (int) (l - (1-slideOffset) * MAX_DRAG_FACTOR * (r - l)*0.5f);
+            final int menuLeft = (int) (l - (1-slideOffset) * MAX_DRAG_FACTOR * (r - l)*slideMenuParallaxOffset);
             final int menuRight = menuLeft + slideMenuWidth;
             slideMenuView.layout(menuLeft, t, menuRight, t + slideMenuHeight);
         }
