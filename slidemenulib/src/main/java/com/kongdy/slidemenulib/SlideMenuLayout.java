@@ -20,8 +20,9 @@ import android.view.ViewParent;
  **/
 public class SlideMenuLayout extends ViewGroup {
 
-    private final static long DEFAULT_ANIMATION_TIME = 300L;
+    private final static long DEFAULT_ANIMATION_TIME = 249;
     private final static float MAX_DRAG_FACTOR = 4f / 5f;
+    private final static float DEFAULT_SCALE_RATE = 1f / 5f;
     /**
      * is playing animation
      */
@@ -42,7 +43,9 @@ public class SlideMenuLayout extends ViewGroup {
      * is on drag
      */
     private final static int VIEW_MODE_DRAG = 0x05;
-
+    /**
+     * is idle mode
+     */
     private final static int VIEW_MODE_IDLE = 0x06;
 
 
@@ -58,6 +61,7 @@ public class SlideMenuLayout extends ViewGroup {
     private float preTouchX = 0;
     private float preTouchY = 0;
     private float slideMenuParallaxOffset = 0.5f;
+    private boolean haveScaleMode = false;
 
     public SlideMenuLayout(Context context) {
         this(context, null);
@@ -74,7 +78,7 @@ public class SlideMenuLayout extends ViewGroup {
     }
 
     private void initComponent() {
-
+        // nothing to do
     }
 
     @Override
@@ -99,8 +103,10 @@ public class SlideMenuLayout extends ViewGroup {
                 contentViewId = ta.getResourceId(index, View.NO_ID);
             } else if (index == R.styleable.SlideMenuLayout_sml_menu_id) {
                 slideMenuId = ta.getResourceId(index, View.NO_ID);
-            } else if(index == R.styleable.SlideMenuLayout_sml_parallax_offset){
-                slideMenuParallaxOffset = ta.getFloat(index,0.5f);
+            } else if (index == R.styleable.SlideMenuLayout_sml_parallax_offset) {
+                slideMenuParallaxOffset = ta.getFloat(index, 0.5f);
+            } else if (index == R.styleable.SlideMenuLayout_sml_scale_mode) {
+                haveScaleMode = ta.getBoolean(index, false);
             }
         }
 
@@ -206,8 +212,14 @@ public class SlideMenuLayout extends ViewGroup {
         final int parentMeasureHeight = MeasureSpec.getSize(heightMeasureSpec);
 
         if (contentView != null) {
+            int childHeight;
+            if (haveScaleMode) {
+                childHeight = (int) ((1 - slideOffset * DEFAULT_SCALE_RATE) * parentMeasureHeight);
+            } else {
+                childHeight = parentMeasureHeight;
+            }
             contentView.measure(MeasureSpec.makeMeasureSpec(parentMeasureWidth, MeasureSpec.EXACTLY
-            ), MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
+            ), MeasureSpec.makeMeasureSpec(childHeight, MeasureSpec.EXACTLY));
         }
         if (slideMenuView != null) {
             slideMenuView.measure(MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth * MAX_DRAG_FACTOR), MeasureSpec.EXACTLY),
@@ -272,13 +284,16 @@ public class SlideMenuLayout extends ViewGroup {
         if (contentView != null) {
             final int contentLeft = (int) (l + slideOffset * MAX_DRAG_FACTOR * (r - l));
             final int contentRight = contentLeft + contentView.getMeasuredWidth();
-            contentView.layout(contentLeft, t, contentRight, b);
+            int contentHeight = contentView.getMeasuredHeight();
+            final int contentTop = t + (b - t - contentHeight) / 2;
+            final int contentBottom = contentTop + contentHeight;
+            contentView.layout(contentLeft, contentTop, contentRight, contentBottom);
         }
         if (slideMenuView != null) {
             final int slideMenuWidth = slideMenuView.getMeasuredWidth();
             final int slideMenuHeight = slideMenuView.getMeasuredHeight();
             // 视觉滚动差效果
-            final int menuLeft = (int) (l - (1-slideOffset) * MAX_DRAG_FACTOR * (r - l)*slideMenuParallaxOffset);
+            final int menuLeft = (int) (l - (1 - slideOffset) * MAX_DRAG_FACTOR * (r - l) * slideMenuParallaxOffset);
             final int menuRight = menuLeft + slideMenuWidth;
             slideMenuView.layout(menuLeft, t, menuRight, t + slideMenuHeight);
         }

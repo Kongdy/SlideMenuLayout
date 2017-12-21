@@ -5,5 +5,7 @@
         <attr name="sml_menu_id" format="reference"/>
         <!-- 视觉滚动差参数因子 -->
         <attr name="sml_parallax_offset" format="float"/>
+        <!-- 是否带有缩放效果 -->
+        <attr name="sml_scale_mode" format="boolean"/>
     </declare-styleable>
 </resources>
