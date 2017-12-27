@@ -13,6 +13,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun myClick(v:View){
+
         if(sml_menu.isOpen){
             sml_menu.animToClose()
         } else {

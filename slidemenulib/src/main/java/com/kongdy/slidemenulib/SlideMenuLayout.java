@@ -21,7 +21,7 @@ import android.view.ViewParent;
 public class SlideMenuLayout extends ViewGroup {
 
     private final static long DEFAULT_ANIMATION_TIME = 249;
-    private final static float MAX_DRAG_FACTOR = 4f / 5f;
+    private final static float MAX_DRAG_FACTOR = 5f / 7f;
     private final static float DEFAULT_SCALE_RATE = 1f / 5f;
     /**
      * is playing animation
@@ -47,7 +47,6 @@ public class SlideMenuLayout extends ViewGroup {
      * is idle mode
      */
     private final static int VIEW_MODE_IDLE = 0x06;
-
 
     private View slideMenuView;
     private View contentView;
@@ -212,14 +211,13 @@ public class SlideMenuLayout extends ViewGroup {
         final int parentMeasureHeight = MeasureSpec.getSize(heightMeasureSpec);
 
         if (contentView != null) {
-            int childHeight;
-            if (haveScaleMode) {
-                childHeight = (int) ((1 - slideOffset * DEFAULT_SCALE_RATE) * parentMeasureHeight);
-            } else {
-                childHeight = parentMeasureHeight;
+            if(haveScaleMode) {
+                final float tempScale = (1 - slideOffset * DEFAULT_SCALE_RATE);
+                contentView.setScaleX(tempScale);
+                contentView.setScaleY(tempScale);
             }
             contentView.measure(MeasureSpec.makeMeasureSpec(parentMeasureWidth, MeasureSpec.EXACTLY
-            ), MeasureSpec.makeMeasureSpec(childHeight, MeasureSpec.EXACTLY));
+            ), MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
         }
         if (slideMenuView != null) {
             slideMenuView.measure(MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth * MAX_DRAG_FACTOR), MeasureSpec.EXACTLY),
@@ -282,9 +280,9 @@ public class SlideMenuLayout extends ViewGroup {
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         // to layout menu view and content view
         if (contentView != null) {
+            int contentHeight = contentView.getMeasuredHeight();
             final int contentLeft = (int) (l + slideOffset * MAX_DRAG_FACTOR * (r - l));
             final int contentRight = contentLeft + contentView.getMeasuredWidth();
-            int contentHeight = contentView.getMeasuredHeight();
             final int contentTop = t + (b - t - contentHeight) / 2;
             final int contentBottom = contentTop + contentHeight;
             contentView.layout(contentLeft, contentTop, contentRight, contentBottom);
