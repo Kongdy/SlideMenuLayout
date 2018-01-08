@@ -13,7 +13,7 @@
         android:background="@color/colorAccent"
         app:sml_content_id="@id/cl_content"
         app:sml_menu_id="@id/cl_slide_menu"
-        app:sml_scale_mode="false">
+        app:sml_scale_mode="true">
 
         <android.support.constraint.ConstraintLayout
             android:id="@+id/cl_content"

@@ -10,6 +10,7 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 
@@ -61,6 +62,8 @@ public class SlideMenuLayout extends ViewGroup {
     private float preTouchY = 0;
     private float slideMenuParallaxOffset = 0.5f;
     private boolean haveScaleMode = false;
+    private int touchSlop = 0; // 最小滑动距离
+    private boolean isClickEvent = true;
 
     public SlideMenuLayout(Context context) {
         this(context, null);
@@ -78,6 +81,9 @@ public class SlideMenuLayout extends ViewGroup {
 
     private void initComponent() {
         // nothing to do
+        ViewConfiguration vc = ViewConfiguration.get(getContext());
+        touchSlop = vc.getScaledTouchSlop();
+
     }
 
     @Override
@@ -171,31 +177,43 @@ public class SlideMenuLayout extends ViewGroup {
             case MotionEvent.ACTION_DOWN:
                 preTouchX = event.getX();
                 preTouchY = event.getY();
+                isClickEvent = true;
                 break;
             case MotionEvent.ACTION_MOVE: {
                 final float currentTouchX = event.getX();
                 final float offsetX = currentTouchX - preTouchX;
-                int contentLeft = contentView.getLeft();
-                int preCalcLeft = (int) (contentLeft + offsetX);
-                if (preCalcLeft >= 0 && preCalcLeft <= getWidth() * MAX_DRAG_FACTOR) {
-                    slideOffset = preCalcLeft / (getWidth() * MAX_DRAG_FACTOR);
-                    reDraw();
+                if(Math.abs(offsetX) > touchSlop || !isClickEvent) {
+                    isClickEvent = false;
+                    int contentLeft = contentView.getLeft();
+                    int preCalcLeft = (int) (contentLeft + offsetX);
+                    if (preCalcLeft >= 0 && preCalcLeft <= getWidth() * MAX_DRAG_FACTOR) {
+                        slideOffset = preCalcLeft / (getWidth() * MAX_DRAG_FACTOR);
+                        reDraw();
+                    }
+                    preTouchX = currentTouchX;
+                } else {
+                    isClickEvent = true;
                 }
-                preTouchX = currentTouchX;
             }
             break;
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
-                int contentLeft = contentView.getLeft();
-                final int currentWidth = getWidth();
-                final int halfWidth = currentWidth / 2;
-                int animFactor = (contentLeft + halfWidth) / currentWidth;
-                if (animFactor > 0) {
-                    animToOpen();
-                } else {
+                Rect contentViewRect = new Rect();
+                contentView.getDrawingRect(contentViewRect);
+                if(isClickEvent && isOpen() && contentViewRect.contains((int)event.getX(),(int)event.getY())) {
                     animToClose();
+                } else {
+                    int contentLeft = contentView.getLeft();
+                    final int currentWidth = getWidth();
+                    final int halfWidth = currentWidth / 2;
+                    int animFactor = (contentLeft + halfWidth) / currentWidth;
+                    if (animFactor > 0) {
+                        animToOpen();
+                    } else {
+                        animToClose();
+                    }
+                    resetTouchMode();
                 }
-                resetTouchMode();
             }
 
             break;
