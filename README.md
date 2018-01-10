@@ -272,7 +272,7 @@
 
 ```java
 dependencies {
-		compile 'com.github.Kongdy:slidemenulib:v1.0.1'
+		compile 'com.github.Kongdy:SlideMenuLayout:v1.0.2'
 	}
 ```
 
