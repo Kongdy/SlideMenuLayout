@@ -11,6 +11,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
@@ -23,8 +24,17 @@ import android.view.ViewParent;
  **/
 public class SlideMenuLayout extends ViewGroup {
 
+    /**
+     * 采用方法拉开、关闭菜单的时候的动画执行时间
+     */
     private final static long DEFAULT_ANIMATION_TIME = 249;
+    /**
+     * 最大滑动比例
+     */
     private final static float MAX_DRAG_FACTOR = 5f / 7f;
+    /**
+     * 滑动过程中content要缩小的比例
+     */
     private final static float DEFAULT_SCALE_RATE = 1f / 5f;
     /**
      * is playing animation
@@ -51,6 +61,11 @@ public class SlideMenuLayout extends ViewGroup {
      */
     private final static int VIEW_MODE_IDLE = 0x06;
 
+    /**
+     * 滑动速度跟踪
+     */
+    private VelocityTracker velocityTracker;
+
     private View slideMenuView;
     private View contentView;
     private int slideMenuId;
@@ -61,11 +76,15 @@ public class SlideMenuLayout extends ViewGroup {
     private int viewMode = SLIDE_MODE_CLOSE;
     private int slideMode = SLIDE_MODE_CLOSE;
     private float preTouchX = 0;
-    private float preTouchY = 0;
     private float slideMenuParallaxOffset = 0.5f;
     private boolean haveScaleMode = false;
     private int touchSlop = 0; // 最小滑动距离
     private boolean isClickEvent = true;
+    private float currentDragRate = MAX_DRAG_FACTOR;
+    /**
+     * 滑动速度阈值
+     */
+    private int flingVelocityThreshold;
 
     public SlideMenuLayout(Context context) {
         this(context, null);
@@ -85,7 +104,11 @@ public class SlideMenuLayout extends ViewGroup {
         // nothing to do
         ViewConfiguration vc = ViewConfiguration.get(getContext());
         touchSlop = vc.getScaledTouchSlop();
+        int systemFlingMinVelocity = vc.getScaledMinimumFlingVelocity();
+        int systemFlingMaxVelocity = vc.getScaledMaximumFlingVelocity();
+        flingVelocityThreshold = (systemFlingMaxVelocity-systemFlingMinVelocity)/2;
 
+        velocityTracker = VelocityTracker.obtain();
     }
 
     @Override
@@ -97,12 +120,12 @@ public class SlideMenuLayout extends ViewGroup {
 
         if (null != contentView) {
             bringChildToFront(contentView);
-            Drawable contentBack =  contentView.getBackground();
-            if(contentBack == null) {
+            Drawable contentBack = contentView.getBackground();
+            if (contentBack == null) {
                 contentView.setBackgroundColor(Color.WHITE);
             }
         }
-        if(getBackground() == null){
+        if (getBackground() == null) {
             setBackgroundColor(Color.GRAY);
         }
     }
@@ -126,6 +149,8 @@ public class SlideMenuLayout extends ViewGroup {
         }
 
         ta.recycle();
+
+        currentDragRate = haveScaleMode ? MAX_DRAG_FACTOR*(1-DEFAULT_SCALE_RATE) : MAX_DRAG_FACTOR;
     }
 
     @Override
@@ -141,6 +166,7 @@ public class SlideMenuLayout extends ViewGroup {
 
                 if (rect.contains(touchDownX, touchDownY)) {
                     viewMode = VIEW_MODE_TOUCH;
+                    velocityTracker.clear();
                     return true;
                 }
             }
@@ -186,18 +212,19 @@ public class SlideMenuLayout extends ViewGroup {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 preTouchX = event.getX();
-                preTouchY = event.getY();
                 isClickEvent = true;
                 break;
             case MotionEvent.ACTION_MOVE: {
                 final float currentTouchX = event.getX();
                 final float offsetX = currentTouchX - preTouchX;
-                if(Math.abs(offsetX) > touchSlop || !isClickEvent) {
+                if (Math.abs(offsetX) > touchSlop || !isClickEvent) {
                     isClickEvent = false;
+                    velocityTracker.addMovement(event);
+                    velocityTracker.computeCurrentVelocity(1000);
                     int contentLeft = contentView.getLeft();
                     int preCalcLeft = (int) (contentLeft + offsetX);
-                    if (preCalcLeft >= 0 && preCalcLeft <= getWidth() * MAX_DRAG_FACTOR) {
-                        slideOffset = preCalcLeft / (getWidth() * MAX_DRAG_FACTOR);
+                    if (preCalcLeft >= 0 && preCalcLeft <= getWidth() * currentDragRate) {
+                        slideOffset = preCalcLeft / (getWidth() * currentDragRate);
                         reDraw();
                     }
                     preTouchX = currentTouchX;
@@ -210,20 +237,31 @@ public class SlideMenuLayout extends ViewGroup {
             case MotionEvent.ACTION_UP: {
                 Rect contentViewRect = new Rect();
                 contentView.getDrawingRect(contentViewRect);
-                if(isClickEvent && isOpen() && contentViewRect.contains((int)event.getX(),(int)event.getY())) {
+                if (isClickEvent && isOpen() && contentViewRect.contains((int) event.getX(), (int) event.getY())) {
                     animToClose();
                 } else {
-                    int contentLeft = contentView.getLeft();
-                    final int currentWidth = getWidth();
-                    final int halfWidth = currentWidth / 2;
-                    int animFactor = (contentLeft + halfWidth) / currentWidth;
-                    if (animFactor > 0) {
-                        animToOpen();
+                    float xVelocity = velocityTracker.getXVelocity();
+                    if(Math.abs(xVelocity) >= flingVelocityThreshold) {
+                        if(xVelocity > 0) {
+                            animToOpen();
+                        } else {
+                            animToClose();
+                        }
                     } else {
-                        animToClose();
+                        int contentLeft = contentView.getLeft();
+                        final int currentWidth = (int) (getWidth()*currentDragRate);
+                        final int halfWidth = currentWidth / 2;
+                        int animFactor = (contentLeft + halfWidth) / currentWidth;
+                        if (animFactor > 0) {
+                            animToOpen();
+                        } else {
+                            animToClose();
+                        }
                     }
+
                     resetTouchMode();
                 }
+                velocityTracker.clear();
             }
 
             break;
@@ -239,7 +277,7 @@ public class SlideMenuLayout extends ViewGroup {
         final int parentMeasureHeight = MeasureSpec.getSize(heightMeasureSpec);
 
         if (contentView != null) {
-            if(haveScaleMode) {
+            if (haveScaleMode) {
                 final float tempScale = (1 - slideOffset * DEFAULT_SCALE_RATE);
                 contentView.setScaleX(tempScale);
                 contentView.setScaleY(tempScale);
@@ -248,7 +286,7 @@ public class SlideMenuLayout extends ViewGroup {
             ), MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
         }
         if (slideMenuView != null) {
-            slideMenuView.measure(MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth * MAX_DRAG_FACTOR), MeasureSpec.EXACTLY),
+            slideMenuView.measure(MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth * currentDragRate), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
         }
     }
@@ -309,7 +347,7 @@ public class SlideMenuLayout extends ViewGroup {
         // to layout menu view and content view
         if (contentView != null) {
             int contentHeight = contentView.getMeasuredHeight();
-            final int contentLeft = (int) (l + slideOffset * MAX_DRAG_FACTOR * (r - l));
+            final int contentLeft = (int) (l + slideOffset * currentDragRate * (r - l));
             final int contentRight = contentLeft + contentView.getMeasuredWidth();
             final int contentTop = t + (b - t - contentHeight) / 2;
             final int contentBottom = contentTop + contentHeight;
@@ -319,7 +357,7 @@ public class SlideMenuLayout extends ViewGroup {
             final int slideMenuWidth = slideMenuView.getMeasuredWidth();
             final int slideMenuHeight = slideMenuView.getMeasuredHeight();
             // 视觉滚动差效果
-            final int menuLeft = (int) (l - (1 - slideOffset) * MAX_DRAG_FACTOR * (r - l) * slideMenuParallaxOffset);
+            final int menuLeft = (int) (l - (1 - slideOffset) * currentDragRate * (r - l) * slideMenuParallaxOffset);
             final int menuRight = menuLeft + slideMenuWidth;
             slideMenuView.layout(menuLeft, t, menuRight, t + slideMenuHeight);
         }
