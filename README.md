@@ -272,7 +272,7 @@
 
 ```java
 dependencies {
-		implementation 'com.github.Kongdy:SlideMenuLayout:v1.0.3'
+		implementation 'com.github.Kongdy:SlideMenuLayout:v1.0.4'
 	}
 ```
 
