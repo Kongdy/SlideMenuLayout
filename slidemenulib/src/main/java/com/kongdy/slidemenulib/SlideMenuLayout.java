@@ -6,7 +6,9 @@ import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -93,8 +95,19 @@ public class SlideMenuLayout extends ViewGroup {
         slideMenuView = findViewById(slideMenuId);
         contentView = findViewById(contentViewId);
 
-        if (null != contentView)
+        if(null != slideMenuView) {
+            Drawable contentBack =  slideMenuView.getBackground();
+            if(null == contentBack) {
+                slideMenuView.setBackgroundColor(Color.GRAY);
+            }
+        }
+        if (null != contentView) {
             bringChildToFront(contentView);
+            Drawable contentBack =  contentView.getBackground();
+            if(contentBack == null) {
+                contentView.setBackgroundColor(Color.WHITE);
+            }
+        }
     }
 
     private void applyAttr(AttributeSet attrs) {
