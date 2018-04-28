@@ -95,18 +95,15 @@ public class SlideMenuLayout extends ViewGroup {
         slideMenuView = findViewById(slideMenuId);
         contentView = findViewById(contentViewId);
 
-        if(null != slideMenuView) {
-            Drawable contentBack =  slideMenuView.getBackground();
-            if(null == contentBack) {
-                slideMenuView.setBackgroundColor(Color.GRAY);
-            }
-        }
         if (null != contentView) {
             bringChildToFront(contentView);
             Drawable contentBack =  contentView.getBackground();
             if(contentBack == null) {
                 contentView.setBackgroundColor(Color.WHITE);
             }
+        }
+        if(getBackground() == null){
+            setBackgroundColor(Color.GRAY);
         }
     }
 
