@@ -13,24 +13,7 @@
         android:background="@color/colorAccent"
         app:sml_content_id="@+id/cl_content"
         app:sml_menu_id="@+id/cl_slide_menu"
-        app:sml_scale_mode="true">
-
-        <android.support.constraint.ConstraintLayout
-            android:id="@id/cl_content"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@color/colorPrimary">
-
-            <android.support.v7.widget.AppCompatTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                android:text="@string/app_name" />
-        </android.support.constraint.ConstraintLayout>
+        app:sml_scale_mode="false">
 
         <android.support.constraint.ConstraintLayout
             android:id="@id/cl_slide_menu"
@@ -39,6 +22,7 @@
             android:background="@color/colorAccent">
 
             <android.support.v7.widget.AppCompatTextView
+                android:id="@+id/actv_test"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
@@ -46,8 +30,30 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"
+                android:onClick="myClick"
                 android:text="@string/app_name" />
 
+        </android.support.constraint.ConstraintLayout>
+
+
+
+        <android.support.constraint.ConstraintLayout
+            android:id="@id/cl_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/colorPrimary">
+
+            <android.support.v7.widget.AppCompatTextView
+                android:id="@+id/actv_content_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:onClick="myClick"
+                android:text="@string/app_name" />
         </android.support.constraint.ConstraintLayout>
 
     </com.kongdy.slidemenulib.SlideMenuLayout>

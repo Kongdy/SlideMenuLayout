@@ -106,7 +106,7 @@ public class SlideMenuLayout extends ViewGroup {
         touchSlop = vc.getScaledTouchSlop();
         int systemFlingMinVelocity = vc.getScaledMinimumFlingVelocity();
         int systemFlingMaxVelocity = vc.getScaledMaximumFlingVelocity();
-        flingVelocityThreshold = (systemFlingMaxVelocity-systemFlingMinVelocity)/2;
+        flingVelocityThreshold = (systemFlingMaxVelocity-systemFlingMinVelocity)/3;
 
         velocityTracker = VelocityTracker.obtain();
     }
@@ -159,12 +159,12 @@ public class SlideMenuLayout extends ViewGroup {
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN: {
                 Rect rect = new Rect();
-                contentView.getDrawingRect(rect);
+                contentView.getHitRect(rect);
 
                 final int touchDownX = (int) ev.getX();
                 final int touchDownY = (int) ev.getY();
 
-                if (rect.contains(touchDownX, touchDownY)) {
+                if (isOpen() && rect.contains(touchDownX, touchDownY)) {
                     viewMode = VIEW_MODE_TOUCH;
                     velocityTracker.clear();
                     return true;
@@ -236,7 +236,7 @@ public class SlideMenuLayout extends ViewGroup {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP: {
                 Rect contentViewRect = new Rect();
-                contentView.getDrawingRect(contentViewRect);
+                contentView.getHitRect(contentViewRect);
                 if (isClickEvent && isOpen() && contentViewRect.contains((int) event.getX(), (int) event.getY())) {
                     animToClose();
                 } else {
@@ -271,24 +271,32 @@ public class SlideMenuLayout extends ViewGroup {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+      //  super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-        final int parentMeasureWidth = MeasureSpec.getSize(widthMeasureSpec);
-        final int parentMeasureHeight = MeasureSpec.getSize(heightMeasureSpec);
+        int parentMeasureWidth = MeasureSpec.getSize(widthMeasureSpec);
+        int parentMeasureHeight = MeasureSpec.getSize(heightMeasureSpec);
 
+        View contentView = findViewById(contentViewId);
+        View slideMenuView = findViewById(slideMenuId);
         if (contentView != null) {
             if (haveScaleMode) {
                 final float tempScale = (1 - slideOffset * DEFAULT_SCALE_RATE);
                 contentView.setScaleX(tempScale);
                 contentView.setScaleY(tempScale);
             }
-            contentView.measure(MeasureSpec.makeMeasureSpec(parentMeasureWidth, MeasureSpec.EXACTLY
+            measureChild(contentView,MeasureSpec.makeMeasureSpec(parentMeasureWidth, MeasureSpec.EXACTLY
             ), MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
+            parentMeasureWidth = Math.max(parentMeasureWidth,contentView.getMeasuredWidth());
+            parentMeasureHeight = Math.max(parentMeasureHeight,contentView.getMeasuredHeight());
         }
         if (slideMenuView != null) {
-            slideMenuView.measure(MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth * currentDragRate), MeasureSpec.EXACTLY),
+            measureChild(slideMenuView,MeasureSpec.makeMeasureSpec((int) (parentMeasureWidth * currentDragRate), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(parentMeasureHeight, MeasureSpec.EXACTLY));
+            parentMeasureWidth = Math.max(parentMeasureWidth,slideMenuView.getMeasuredWidth());
+            parentMeasureHeight = Math.max(parentMeasureHeight,slideMenuView.getMeasuredHeight());
         }
+        setMeasuredDimension(resolveSize(parentMeasureWidth, widthMeasureSpec),
+                resolveSize(parentMeasureHeight, heightMeasureSpec));
     }
 
     public boolean isOpen() {
